@@ -1,0 +1,57 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import "tailwindcss";
+
+/* Tailwind 4 다크모드: class 기반 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* 배경 / 전경 */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* TaskInsight 시맨틱 색상 */
+  --color-critical: #DC2626;
+  --color-warning:  #F59E0B;
+  --color-normal:   #6B7280;
+  --color-good:     #059669;
+  --color-accent:   #2563EB;
+
+  /* Flow 단계 색상 */
+  --color-stage-backlog:     #6B7280;
+  --color-stage-in-progress: #2563EB;
+  --color-stage-review:      #F59E0B;
+  --color-stage-done:        #059669;
+  --color-stage-blocked:     #DC2626;
+}
+
+:root {
+  --background: #F9FAFB;
+  --foreground: #111827;
+  --surface: #FFFFFF;
+  --border: #E5E7EB;
+  --muted: #6B7280;
+  --sidebar-width: 72px;
+}
+
+.dark {
+  --background: #0F172A;
+  --foreground: #F1F5F9;
+  --surface: #1E293B;
+  --border: #334155;
+  --muted: #94A3B8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
