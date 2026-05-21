@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -75,8 +76,8 @@ def update_instance(
 
     if req.config is not None:
         merged = {**row.config, **req.config}
-        updates.append("config = :config")
-        params["config"] = merged  # psycopg handles dict → jsonb
+        updates.append("config = :config::jsonb")
+        params["config"] = json.dumps(merged, ensure_ascii=False)
 
     if req.is_active is not None:
         updates.append("is_active = :is_active")
