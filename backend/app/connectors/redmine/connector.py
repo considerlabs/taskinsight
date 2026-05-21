@@ -91,7 +91,12 @@ class RedmineConnector(BaseConnector):
         return []
 
     def _fetch_users(self, base_url: str, headers: dict, since: Optional[datetime]) -> list:
-        return self._paginate(base_url, headers, "users.json", {"status": 0}, "users")
+        # status 파라미터 없음 → 관리자 권한이면 활성 사용자 반환, 없으면 빈 배열
+        # (status=0은 일부 Redmine 버전에서 anonymous users만 반환)
+        try:
+            return self._paginate(base_url, headers, "users.json", {}, "users")
+        except Exception:
+            return []
 
     def _fetch_projects(self, base_url: str, headers: dict, since: Optional[datetime]) -> list:
         return self._paginate(base_url, headers, "projects.json", {}, "projects")

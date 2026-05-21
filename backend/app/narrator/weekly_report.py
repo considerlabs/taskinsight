@@ -91,6 +91,7 @@ def _get_forecast(db: Session, project_id: Optional[int]) -> dict:
         ) t
     """)).scalar() or 1
 
+    weekly_avg = float(weekly_avg)
     p50 = round(backlog / weekly_avg)
     p85 = round(backlog / (weekly_avg * 0.8))
     p95 = round(backlog / (weekly_avg * 0.65))
@@ -114,6 +115,7 @@ def _llm_narrative(throughput: dict, bottleneck: list, forecast: dict) -> str:
                     {"role": "user",   "content": prompt},
                 ],
                 "stream": False,
+                "think": False,
                 "options": {"temperature": 0.3},
             },
             timeout=120,

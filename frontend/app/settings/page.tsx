@@ -120,9 +120,12 @@ export default function SettingsPage() {
     try {
       const res = await syncConnector(instance.id);
       const s = res.sync as Record<string, number>;
+      const newIssues = s.issues_new ?? s.issues ?? 0;
+      const totalIssues = s.db_issues ?? newIssues;
+      const journals = s.db_journals ?? s.journals_new ?? 0;
       setSyncResult({
         ok: true,
-        msg: `동기화 완료 — 프로젝트 ${s.projects ?? 0}건, 이슈 ${s.issues ?? 0}건, 구성원 ${s.users ?? 0}명`,
+        msg: `동기화 완료 — 프로젝트 ${s.projects ?? 0}건 | 이슈 ${newIssues}건 신규 (DB 총 ${totalIssues.toLocaleString()}건) | 구성원 ${s.users ?? 0}명 | 저널 ${journals.toLocaleString()}건`,
       });
     } catch (e) {
       setSyncResult({ ok: false, msg: `동기화 실패: ${(e as Error).message}` });

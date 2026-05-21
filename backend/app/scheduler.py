@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -12,7 +13,7 @@ from app.db import SessionLocal
 log = logging.getLogger(__name__)
 
 
-def _get_active_connector_config() -> dict | None:
+def _get_active_connector_config() -> Optional[dict]:
     db = SessionLocal()
     try:
         row = db.execute(
@@ -37,9 +38,14 @@ def run_nightly_etl() -> None:
         from app.etl.populate import run_etl
         from app.narrator.issue_explainer import explain_issue
 
-        # 1) Redmine sync
+        # 1) Redmine sync (야간 배치는 저널 1000건씩 수집)
+        from app.collector.redmine_collector import _collect_journals
         sync_result = sync_redmine(config, db)
         log.info("Sync 완료: %s", sync_result)
+
+        # 저널 추가 수집 (sync 내 200건 + 야간 800건 추가)
+        extra_j = _collect_journals(db, config, max_issues=800)
+        log.info("추가 저널 수집: %d건", extra_j)
 
         # 2) ETL
         etl_result = run_etl(db)
@@ -100,7 +106,7 @@ def create_scheduler() -> BackgroundScheduler:
     return scheduler
 
 
-_scheduler: BackgroundScheduler | None = None
+_scheduler: Optional[BackgroundScheduler] = None
 
 
 def get_scheduler() -> BackgroundScheduler:

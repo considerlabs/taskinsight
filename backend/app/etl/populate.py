@@ -57,7 +57,7 @@ def populate_state_transitions(db: Session) -> int:
             j.journalized_id                               AS issue_id,
             j.id                                           AS journal_id,
             (d->>'old_value')::int                         AS from_status_id,
-            (d->>'value')::int                             AS to_status_id,
+            COALESCE(d->>'new_value', d->>'value')::int   AS to_status_id,
             COALESCE(ds_from.flow_stage, 'unknown')        AS from_stage,
             COALESCE(ds_to.flow_stage,   'unknown')        AS to_stage,
             j.created_on                                   AS changed_at,
@@ -65,10 +65,10 @@ def populate_state_transitions(db: Session) -> int:
         FROM raw_redmine_journals j,
              json_array_elements(j.payload->'details') AS d
         LEFT JOIN dim_status ds_from ON ds_from.status_id = (d->>'old_value')::int
-        LEFT JOIN dim_status ds_to   ON ds_to.status_id   = (d->>'value')::int
+        LEFT JOIN dim_status ds_to   ON ds_to.status_id   = COALESCE(d->>'new_value', d->>'value')::int
         WHERE d->>'name' = 'status_id'
           AND (d->>'old_value') ~ '^[0-9]+$'
-          AND (d->>'value')     ~ '^[0-9]+$'
+          AND COALESCE(d->>'new_value', d->>'value') ~ '^[0-9]+$'
         ORDER BY j.journalized_id, j.created_on
     """))
     db.commit()

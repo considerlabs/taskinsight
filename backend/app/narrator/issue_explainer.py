@@ -107,7 +107,7 @@ def build_issue_context(issue_id: int, db: Session) -> Optional[dict[str, Any]]:
     }
 
 
-def explain_issue(issue_id: int, db: Session) -> dict | None:
+def explain_issue(issue_id: int, db: Session) -> Optional[dict]:
     ctx = build_issue_context(issue_id, db)
     if not ctx:
         return None
@@ -124,6 +124,7 @@ def explain_issue(issue_id: int, db: Session) -> dict | None:
                     {"role": "user", "content": prompt},
                 ],
                 "stream": False,
+                "think": False,
                 "options": {"temperature": 0.3},
             },
             timeout=120,
