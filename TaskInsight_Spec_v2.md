@@ -1,4 +1,4 @@
-# TaskView 마스터 스펙 v2
+# TaskInsight 마스터 스펙 v2
 > **작성일:** 2026-05-21  
 > **기준:** TaskInsight_Spec.md (v1) + /grill-me 세션 결정사항 반영  
 > **상태:** MVP 개발 준비 완료
@@ -7,7 +7,7 @@
 
 ## 0. TL;DR — 30초 요약
 
-- **제품명:** TaskView
+- **제품명:** TaskInsight
 - **포지션:** Redmine 데이터를 분석해 팀장/PM의 의사결정을 돕는 한국형 SEI 플랫폼
 - **1차 사용자:** 팀장 + PM (중간관리자). C-level은 2차 (주간보고 수신).
 - **핵심 사용 트리거:** ① 주간 회의 전 보고 준비 ② "왜 이 이슈가 막혔지?" 파악
@@ -75,10 +75,10 @@
 ### 3.1 호스트 & 디렉터리
 
 - **호스트:** macOS Mac Studio, zsh, Python 3.11 (.venv)
-- **프로젝트 루트:** `~/Taskview/`
+- **프로젝트 루트:** `~/TaskInsight/`
 
 ```
-~/Taskview/
+~/TaskInsight/
 ├── backend/
 │   ├── .venv/
 │   ├── alembic/
@@ -115,10 +115,10 @@
 ```
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5433
-POSTGRES_DB=flowlens
-POSTGRES_USER=flowlens
+POSTGRES_DB=taskinsight
+POSTGRES_USER=taskinsight
 POSTGRES_PASSWORD=change-me
-sqlalchemy.url=postgresql+psycopg://flowlens:change-me@localhost:5433/flowlens
+sqlalchemy.url=postgresql+psycopg://taskinsight:change-me@localhost:5433/taskinsight
 
 REDMINE_BASE_URL=http://redmine.mannaplanet.co.kr:5555/redmine
 REDMINE_API_KEY=<redacted>
@@ -132,42 +132,40 @@ OLLAMA_MODEL_HEAVY=qwen3.6:35b-a3b
 
 ### 3.3 DB 인스턴스
 
-- **PostgreSQL 17** — 5433 (TaskView 전용)
+- **PostgreSQL 17** — 5433 (TaskInsight 전용)
 - **TimescaleDB 2.26.4**
-- **시작:** `/opt/homebrew/opt/postgresql@17/bin/pg_ctl -D /opt/homebrew/var/flowlens-pg17 -l /opt/homebrew/var/flowlens-pg17/server.log start`
+- **시작:** `/opt/homebrew/opt/postgresql@17/bin/pg_ctl -D /opt/homebrew/var/taskinsight-pg17 -l /opt/homebrew/var/taskinsight-pg17/server.log start`
 
 ---
 
-## 4. 현재 데이터 현황
+## 4. DB 초기 상태 (신규 생성)
 
-| Table | Rows | MVP 후 신규명 |
-|---|---|---|
-| raw_issues | 16,092 | raw_redmine_issues |
-| raw_journals | 97,302 | raw_redmine_journals |
-| raw_time_entries | 20 | raw_redmine_time_entries |
-| raw_users | 77 | raw_redmine_users |
-| raw_projects | 6 | raw_redmine_projects |
-| raw_versions | 0 | raw_redmine_versions |
-| fct_state_transition | 45,259 | 변경 없음 |
-| fct_issue_flow | 16,092 | 변경 없음 |
-| fct_wip_daily | 31,161 | 변경 없음 |
-| fct_throughput_weekly | 574 | 변경 없음 |
-| dim_project / dim_user | 6 / 88 | 변경 없음 |
+**기존 데이터 재사용 없음. `taskinsight` DB를 신규 생성하고 Redmine에서 데이터를 처음부터 수집한다.**
+
+초기 수집 후 예상 규모 (Redmine 기준):
+
+| Table | 예상 Rows |
+|---|---|
+| raw_redmine_issues | ~16,000 |
+| raw_redmine_journals | ~97,000 |
+| raw_redmine_time_entries | ~20 |
+| raw_redmine_users | ~77 |
+| raw_redmine_projects | ~6 |
+| raw_redmine_versions | 0 |
+
+alembic 001부터 전부 신규 실행. 기존 flowlens DB 및 ~/Taskview/ 디렉터리 건드리지 않음.
 
 ---
 
-## 5. DB 스키마 변경 (alembic 0003)
+## 5. DB 스키마 (신규 생성)
 
-### 5.1 raw 테이블 rename (다운타임 2~3분)
+**신규 DB이므로 rename 없음. alembic 001부터 순서대로 실행.**
 
-```sql
-ALTER TABLE raw_issues       RENAME TO raw_redmine_issues;
-ALTER TABLE raw_journals     RENAME TO raw_redmine_journals;
-ALTER TABLE raw_time_entries RENAME TO raw_redmine_time_entries;
-ALTER TABLE raw_users        RENAME TO raw_redmine_users;
-ALTER TABLE raw_projects     RENAME TO raw_redmine_projects;
-ALTER TABLE raw_versions     RENAME TO raw_redmine_versions;
-```
+### 5.1 알림ic 마이그레이션 순서
+
+- `0001_raw` — raw_redmine_* 테이블 직접 생성 (rename 아님)
+- `0002_mart` — fct_*, dim_* 마트 테이블 생성
+- `0003_mvp` — connector_instance, fct_issue_explanation, fct_weekly_report 생성
 
 ### 5.2 connector_instance (Settings용 — 최소 버전)
 
@@ -290,7 +288,7 @@ def build_issue_context(issue_id: int) -> dict:
 
 **시스템 프롬프트:**
 ```
-당신은 TaskView의 이슈 분석 모듈입니다.
+당신은 TaskInsight의 이슈 분석 모듈입니다.
 주어진 이슈의 타임라인 데이터를 바탕으로 한국어 보고서체(~함, ~됨)로
 3~4문장 설명을 작성하세요.
 
@@ -389,7 +387,7 @@ def generate_weekly_report(project_id: int, period_weeks: int = 1) -> dict:
 │ 2025-01-15  검수자(현복최) 배정                                       │
 │ 2025-01-15 ~ 현재  검수 대기 1,300일                                  │
 │                                                                      │
-│ 🤖 TaskView 분석                              ← qwen3.6:35b-a3b     │
+│ 🤖 TaskInsight 분석                              ← qwen3.6:35b-a3b     │
 │ "검수 요청 후 1,300일이 경과됨. 현복최 님이 타 프로젝트 배정 이후    │
 │  응답이 없는 상태로, 검수자 재배정 또는 일감 종료 검토를 권장함."    │
 │                                                                      │
@@ -600,18 +598,18 @@ def generate_weekly_report(project_id: int, period_weeks: int = 1) -> dict:
 ```bash
 # DB 카운트 확인
 PGPASSWORD=change-me /opt/homebrew/opt/postgresql@17/bin/psql \
-  -h localhost -p 5433 -U flowlens -d flowlens -c "
+  -h localhost -p 5433 -U taskinsight -d taskinsight -c "
 SELECT 'raw_redmine_issues' AS t, COUNT(*) FROM raw_redmine_issues UNION ALL
 SELECT 'raw_redmine_journals', COUNT(*) FROM raw_redmine_journals UNION ALL
 SELECT 'fct_issue_explanation', COUNT(*) FROM fct_issue_explanation UNION ALL
 SELECT 'connector_instance', COUNT(*) FROM connector_instance;"
 
 # Backend 기동
-cd ~/Taskview/backend && source .venv/bin/activate && \
+cd ~/TaskInsight/backend && source .venv/bin/activate && \
   uvicorn app.api.main:app --reload --port 8000
 
 # Frontend 기동
-cd ~/Taskview/frontend && npm run dev
+cd ~/TaskInsight/frontend && npm run dev
 
 # LLM 모델 확인
 curl -s http://localhost:11434/api/tags | python3 -m json.tool | grep '"name"'
@@ -657,4 +655,4 @@ curl http://localhost:8000/v1/flow/issue/10729/explanation
 
 ---
 
-*TaskView Master Spec v2 — 2026-05-21*
+*TaskInsight Master Spec v2 — 2026-05-21*

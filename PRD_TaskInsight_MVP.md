@@ -1,4 +1,4 @@
-# PRD: TaskView MVP
+# PRD: TaskInsight MVP
 
 **작성일:** 2026-05-21  
 **버전:** v1.0  

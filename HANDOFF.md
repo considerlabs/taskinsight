@@ -1,4 +1,4 @@
-# TaskView — 인수인계 문서
+# TaskInsight — 인수인계 문서
 
 **작성일:** 2026-05-21  
 **다음 세션 포커스:** MVP 개발 착수 (이슈 #2 DB 마이그레이션 + 이슈 #3 디자인 시스템부터 병렬 시작)
@@ -8,13 +8,13 @@
 ## 프로젝트 현황
 
 **레포:** https://github.com/considerlabs/taskinsight  
-**프로젝트 루트:** `~/Taskview/` (TaskInsight 레포와 별개 — 레포는 문서 전용, 코드는 ~/Taskview/)
+**프로젝트 루트:** `~/TaskInsight/` (문서 + 코드 동일 레포)
 
 ### 이번 세션에서 완료된 것
 
 1. `/grill-me` — 14개 질문으로 MVP 설계 결정사항 전부 확정
 2. `TaskInsight_Spec_v2.md` 작성 — 기존 v1 스펙을 그릴링 결정사항으로 갱신
-3. `PRD_TaskView_MVP.md` 작성 + GitHub 이슈 #1로 등록
+3. `PRD_TaskInsight_MVP.md` 작성 + GitHub 이슈 #1로 등록
 4. 수직 슬라이스 14개 GitHub 이슈 #2~#15로 등록
 
 ---
@@ -27,7 +27,7 @@
 |---|---|
 | 1차 사용자 | 팀장 + PM |
 | MVP 4화면 | Flow+타임라인 / 주간보고 / Dashboard / Settings |
-| Patch 0 연동 UI | **생략** — BaseConnector ABC + raw rename만 |
+| Patch 0 연동 UI | **생략** — BaseConnector ABC만. 신규 DB이므로 rename 없음 |
 | LLM (타임라인+처방) | `qwen3.6:35b-a3b` |
 | LLM (관찰 레이어) | `qwen2.5-coder:14b` |
 | LLM 캐싱 | 위험점수 상위 20건 새벽 2시 배치 + 온디맨드 캐시 |
@@ -59,60 +59,62 @@
 
 ---
 
-## 코드베이스 현황 (~/Taskview/)
+## 코드베이스 현황
 
-### 이미 구현 완료 (건드리지 말 것)
+### 신규 생성 — 기존 코드/DB 재사용 없음
 
-- **DB:** PostgreSQL 17 (port 5433), DB명 `flowlens`, TimescaleDB 2.26.4
-- **백엔드 분석 모듈 8개:** status_groups, bottleneck, risk, forecast, resource, anomaly, critical_path, summary — 모두 200 검증 완료
-- **FastAPI 엔드포인트 9개:** `/v1/executive/*`, `/v1/manager/*`, `/v1/team/*`, `/v1/insight/*`, `/healthz` — 유지
-- **프론트엔드 5페이지:** `/executive`, `/manager`, `/team`, `/insight`, `/executive/overview` — MVP 기간 공존
+**기존 ~/Taskview/ 및 flowlens DB는 건드리지 않음. 모든 것을 ~/TaskInsight/ 에서 새로 구축.**
 
-### 다음 세션에서 수정할 파일
+- **DB:** PostgreSQL 17 (port 5433), DB명 `taskinsight` (신규 생성), TimescaleDB
+- **DB 사용자:** `taskinsight` (신규)
+- **데이터:** alembic 001부터 신규 실행 → Redmine에서 초기 수집 (~16,000 이슈 예상)
+- **백엔드:** `~/TaskInsight/backend/` 신규 구축 (FastAPI + Python 3.11)
+- **프론트엔드:** `~/TaskInsight/frontend/` 신규 구축 (Next.js 16 + Tailwind 4)
 
-이슈 #2 (DB 마이그레이션):
-- `~/Taskview/backend/alembic/versions/` — 0003 마이그레이션 파일 신규
-- `~/Taskview/backend/app/analytics/*.py` — SQL에서 `raw_` → `raw_redmine_` 일괄 수정
-- `~/Taskview/backend/app/etl/*.py` — 동일
+### 다음 세션 첫 작업 (이슈 #2 + #3 병렬)
+
+이슈 #2 (DB + 백엔드 신규 구축):
+- PostgreSQL 17에 `taskinsight` DB 생성
+- `~/TaskInsight/backend/` 프로젝트 초기화 (pyproject.toml, alembic)
+- alembic 0001 (raw_redmine_* 직접 생성), 0002 (mart), 0003 (MVP additions)
 
 이슈 #3 (디자인 시스템):
-- `~/Taskview/frontend/src/app/globals.css`
-- `~/Taskview/frontend/src/lib/labels.ts` (신규)
-- `~/Taskview/frontend/src/lib/format.ts` (신규)
-- `~/Taskview/frontend/src/components/Sidebar.tsx`
+- `~/TaskInsight/frontend/` 프로젝트 초기화 (Next.js 16)
+- globals.css, labels.ts, format.ts, Sidebar.tsx
 
-### 환경 시작 명령
+### 환경 초기화 명령 (신규 DB)
 
 ```bash
-# DB 시작
-/opt/homebrew/opt/postgresql@17/bin/pg_ctl \
-  -D /opt/homebrew/var/flowlens-pg17 \
-  -l /opt/homebrew/var/flowlens-pg17/server.log start
+# taskinsight DB 생성 (PG17 기존 인스턴스에 신규 DB)
+/opt/homebrew/opt/postgresql@17/bin/psql \
+  -h localhost -p 5433 -U postgres \
+  -c "CREATE USER taskinsight WITH PASSWORD 'change-me';"
+/opt/homebrew/opt/postgresql@17/bin/psql \
+  -h localhost -p 5433 -U postgres \
+  -c "CREATE DATABASE taskinsight OWNER taskinsight;"
 
-# 백엔드
-cd ~/Taskview/backend && source .venv/bin/activate && \
+# 백엔드 (초기화 후)
+cd ~/TaskInsight/backend && source .venv/bin/activate && \
   uvicorn app.api.main:app --reload --port 8000
 
-# 프론트엔드
-cd ~/Taskview/frontend && npm run dev
+# 프론트엔드 (초기화 후)
+cd ~/TaskInsight/frontend && npm run dev
 
 # Ollama 확인
 curl -s http://localhost:11434/api/tags | python3 -m json.tool | grep '"name"'
 ```
 
-### 주요 데이터 현황
+### Redmine 연결 정보
 
-- `raw_issues`: 16,092건 (→ 마이그레이션 후 raw_redmine_issues)
-- `raw_journals`: 97,302건
-- 주요 프로젝트: project_id=29 (만나 플랫폼), open 493건
-- 위험 이슈 예시: #10729 (검수 대기 1,300+일), #8745 (847일)
+- URL: `http://redmine.mannaplanet.co.kr:5555/redmine`
+- API 키: Settings 화면에서 입력 (문서에 기록하지 않음)
 
 ---
 
 ## 주의사항
 
-- `~/Taskview/` 디렉터리와 `~/TaskInsight/` 레포는 별개. 코드는 Taskview, 문서는 TaskInsight.
-- DB명은 내부적으로 `flowlens` 유지 (데이터 이관 회피 결정 D09)
+- **기존 ~/Taskview/ 절대 건드리지 않음.** TaskInsight는 완전 신규 프로젝트.
+- **flowlens DB 재사용 없음.** taskinsight DB를 신규 생성해서 사용.
 - `payload` 컬럼은 jsonb가 아닌 json 타입 → `json_array_elements` 사용
 - Tailwind 4 다크모드: `@custom-variant dark` 사용. `@media prefers-color-scheme` 블록 충돌 주의
 - `lucide-react` 버전 `^0.544.0` 명시 필수
@@ -126,7 +128,7 @@ curl -s http://localhost:11434/api/tags | python3 -m json.tool | grep '"name"'
 |---|---|
 | 마스터 스펙 v2 | `TaskInsight_Spec_v2.md` |
 | 원본 스펙 v1 (참고용) | `TaskInsight_Spec.md` |
-| PRD | `PRD_TaskView_MVP.md` / [이슈 #1](https://github.com/considerlabs/taskinsight/issues/1) |
+| PRD | `PRD_TaskInsight_MVP.md` / [이슈 #1](https://github.com/considerlabs/taskinsight/issues/1) |
 | 이슈 트래커 | https://github.com/considerlabs/taskinsight/issues |
 
 ---
@@ -139,7 +141,7 @@ TaskInsight_Spec_v2.md와 HANDOFF.md를 읽고 작업을 이어갑니다.
 현재 상태: 설계 완료, 이슈 #2(DB 마이그레이션)와 이슈 #3(디자인 시스템)을
 병렬로 시작할 수 있습니다.
 
-코드 작업 디렉터리: ~/Taskview/
+코드 작업 디렉터리: ~/TaskInsight/
 문서 레포: https://github.com/considerlabs/taskinsight
 
 이슈 #2부터 시작해주세요.
