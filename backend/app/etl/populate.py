@@ -76,18 +76,28 @@ def populate_state_transitions(db: Session) -> int:
 
 
 def update_transition_days(db: Session) -> None:
-    """각 전환의 days_in_from(이전 단계 체류일) 계산."""
+    """각 전환의 days_in_from(이전 단계 체류일) 계산.
+    LAG()는 UPDATE 직접 불가 → CTE로 계산 후 JOIN UPDATE.
+    """
+    # 2번째 이후 전환: 이전 전환 changed_at 과의 차이
     db.execute(text("""
+        WITH lagged AS (
+            SELECT id,
+                   EXTRACT(EPOCH FROM (
+                       changed_at - LAG(changed_at) OVER (
+                           PARTITION BY issue_id ORDER BY changed_at
+                       )
+                   )) / 86400.0 AS days
+            FROM fct_state_transition
+        )
         UPDATE fct_state_transition t
-        SET days_in_from = EXTRACT(EPOCH FROM (
-            t.changed_at - LAG(t.changed_at) OVER (
-                PARTITION BY t.issue_id ORDER BY t.changed_at
-            )
-        )) / 86400.0
-        WHERE t.days_in_from IS NULL
+        SET days_in_from = lagged.days
+        FROM lagged
+        WHERE t.id = lagged.id
+          AND lagged.days IS NOT NULL
     """))
 
-    # 첫 번째 전환의 days_in_from = created_on → 첫 전환까지
+    # 첫 번째 전환: issue created_on → 첫 전환까지
     db.execute(text("""
         UPDATE fct_state_transition t
         SET days_in_from = EXTRACT(EPOCH FROM (
