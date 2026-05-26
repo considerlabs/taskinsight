@@ -1,0 +1,55 @@
+id,project,subject,status,priority,tracker,assignee,reporter,done_ratio,due_date,estimated_hours,parent_id,note
+1,platform,TaskInsight 로그인 화면 구현,진행 중,보통,task,dev2,pm1,60,2026-06-15,16,,"
+2,platform,JWT 인증 API 개발,진행 중,높음,task,dev1,pm1,40,2026-06-10,12,,
+3,platform,사용자 권한 체계 설계,완료,높음,task,dev1,pm1,100,2026-05-20,8,,
+4,platform,이슈 목록 조회 API,완료,보통,task,dev1,pm1,100,2026-05-25,8,,
+5,platform,이슈 생성 API,완료,보통,task,dev1,pm1,100,2026-05-28,6,,
+6,platform,이슈 수정/삭제 API,진행 중,높음,task,dev1,pm1,30,2026-06-12,10,,
+7,platform,칸반 보드 UI,진행 중,높음,feature,dev2,pm1,20,2026-06-20,24,,
+8,platform,파일 첨부 기능,신규,보통,feature,dev1,pm1,0,2026-07-01,16,,
+9,platform,Teams 알림 연동,신규,보통,feature,,pm1,0,2026-07-15,12,,
+10,platform,이메일 알림 연동,신규,보통,feature,,pm1,0,2026-07-15,12,,9
+11,platform,이슈 댓글 기능,검수 요청,보통,feature,dev2,pm1,90,2026-06-05,8,,
+12,platform,@멘션 기능,검수 중,보통,feature,dev2,pm1,95,2026-06-03,6,,11
+13,platform,타임 트래킹 입력,신규,낮음,feature,,pm1,0,2026-07-30,8,,
+14,platform,타임 트래킹 리포트,신규,낮음,feature,,pm1,0,2026-08-15,16,,13
+15,platform,대시보드 요약 위젯,완료,보통,task,dev2,pm1,100,2026-05-30,8,,
+16,platform,Alembic 마이그레이션 0004-0007,완료,긴급,task,dev1,pm1,100,2026-05-15,20,,
+17,platform,Docker Compose 최적화,완료,보통,task,devops1,pm1,100,2026-05-10,4,,
+18,platform,Nginx 리버스 프록시 설정,완료,보통,task,devops1,pm1,100,2026-05-10,2,,
+19,platform,Redis 캐시 도입,검수 중,보통,improvement,dev1,pm1,90,2026-06-08,8,,
+20,platform,DB 쿼리 인덱스 최적화,신규,높음,improvement,,pm1,0,2026-06-30,12,,
+# 기한 초과 이슈 (엣지 케이스)
+21,platform,성능 테스트 시나리오 작성,진행 중,높음,task,qa1,pm1,10,2026-05-20,8,,기한 초과 상태 테스트용
+22,platform,보안 취약점 점검,진행 중,긴급,task,dev1,pm1,50,2026-05-18,16,,기한 초과 + 긴급
+# 보류/반려
+23,platform,Gantt 차트 구현,보류,보통,feature,,pm1,0,,40,,v2로 연기
+24,platform,Google SSO 연동,보류,낮음,feature,,pm1,0,,20,,사내망 환경
+25,platform,레거시 REST 방식 도입,반려,낮음,task,,pm1,0,,,"JWT 방식으로 확정됨
+# 재작업
+26,platform,이슈 삭제 API (재설계),재작업,높음,task,dev1,pm1,30,2026-06-18,8,,소프트 삭제 방식으로 재설계
+# 긴 제목 (엣지 케이스)
+27,platform,매우 긴 이슈 제목 테스트: TaskInsight 플랫폼의 사용자 인증 및 권한 관리 모듈에서 발생하는 간헐적 토큰 만료 오류에 대한 근본 원인 분석 및 수정 작업,신규,높음,bug,dev1,pm1,0,2026-07-01,16,,
+# 설명 없는 이슈
+28,platform,빠른 수정 필요,신규,긴급,bug,dev1,pm1,0,2026-06-01,,,설명 없음 엣지 케이스
+# 담당자 없는 이슈
+29,platform,코드 리뷰 가이드 작성,신규,낮음,task,,pm1,0,2026-06-30,4,,담당자 미지정
+30,platform,사용자 매뉴얼 초안,신규,낮음,task,,pm1,0,2026-07-31,8,,담당자 미지정
+# 모바일 프로젝트 이슈
+31,mobile-app,앱 로그인 화면,진행 중,보통,task,dev5,pm2,50,2026-06-20,16,,
+32,mobile-app,푸시 알림 설정,신규,높음,feature,dev6,pm2,0,2026-07-10,12,,
+33,mobile-app,오프라인 모드,신규,낮음,feature,,pm2,0,,40,,네트워크 없을 때 캐시 표시
+34,mobile-app,앱 스토어 배포 체크리스트,신규,보통,task,,pm2,0,2026-08-01,4,,
+35,mobile-app,iOS 빌드 오류 수정,진행 중,긴급,bug,dev5,pm2,60,2026-06-03,8,,기한 임박
+# 인프라 프로젝트 이슈
+36,infra,CI/CD 파이프라인 구축,진행 중,높음,task,devops1,pm1,70,2026-06-15,24,,
+37,infra,DB 자동 백업 스크립트,완료,보통,task,devops1,pm1,100,2026-05-25,4,,
+38,infra,스테이징 환경 구성,진행 중,보통,task,devops1,pm1,40,2026-06-30,16,,
+39,infra,SSL 인증서 설정,신규,보통,task,devops1,pm1,0,2026-07-05,2,,
+40,infra,모니터링 대시보드 설정,신규,낮음,improvement,,pm1,0,2026-07-20,8,,
+# 마이그레이션 프로젝트 이슈
+41,legacy-migration,raw_redmine_* 데이터 정합성 확인,완료,높음,task,dev1,admin,100,2026-05-10,16,,
+42,legacy-migration,migrate_from_redmine.py 작성,완료,긴급,task,dev1,admin,100,2026-05-20,24,,
+43,legacy-migration,마이그레이션 리허설 실행,진행 중,긴급,task,dev1,admin,60,2026-06-01,8,,
+44,legacy-migration,D-day 실행 계획 수립,완료,높음,task,pm1,admin,100,2026-05-25,4,,
+45,legacy-migration,사용자 임시 비밀번호 발송,신규,높음,task,,admin,0,2026-06-15,2,,마이그레이션 후 실행

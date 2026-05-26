@@ -1,0 +1,37 @@
+issue_id,user_email,hours,activity,spent_on,description
+# platform 프로젝트 시간기록
+1,dev2@taskinsight.local,4.0,development,2026-05-20,로그인 UI 기본 구조 작성
+1,dev2@taskinsight.local,3.5,development,2026-05-21,유효성 검사 로직 구현
+1,dev2@taskinsight.local,2.0,review,2026-05-22,디자인 시안 반영
+2,dev1@taskinsight.local,4.0,development,2026-05-19,JWT 토큰 발급 구현
+2,dev1@taskinsight.local,3.0,development,2026-05-20,리프레시 토큰 구현
+2,dev1@taskinsight.local,2.0,testing,2026-05-21,토큰 만료 테스트
+3,dev1@taskinsight.local,6.0,development,2026-05-12,역할 매트릭스 구현
+3,dev1@taskinsight.local,2.0,review,2026-05-13,코드 리뷰 반영
+4,dev1@taskinsight.local,4.0,development,2026-05-22,이슈 목록 쿼리 작성
+4,dev1@taskinsight.local,2.0,testing,2026-05-23,페이지네이션 테스트
+5,dev1@taskinsight.local,3.0,development,2026-05-25,이슈 생성 API 작성
+5,dev1@taskinsight.local,1.5,testing,2026-05-26,유효성 검사 테스트
+6,dev1@taskinsight.local,4.0,development,2026-05-23,이슈 수정 API
+6,dev1@taskinsight.local,2.0,development,2026-05-24,소프트 삭제 구현
+7,dev2@taskinsight.local,8.0,development,2026-05-24,칸반 보드 레이아웃
+7,dev2@taskinsight.local,6.0,development,2026-05-25,드래그앤드롭 통합
+11,dev2@taskinsight.local,4.0,development,2026-05-26,댓글 CRUD API
+11,dev2@taskinsight.local,3.0,development,2026-05-27,댓글 UI 컴포넌트
+12,dev2@taskinsight.local,2.0,development,2026-05-27,@멘션 파싱 로직
+12,dev2@taskinsight.local,2.5,testing,2026-05-28,멘션 알림 테스트
+15,dev2@taskinsight.local,4.0,development,2026-05-28,위젯 컴포넌트
+16,dev1@taskinsight.local,8.0,development,2026-05-13,마이그레이션 파일 작성
+16,dev1@taskinsight.local,4.0,testing,2026-05-14,마이그레이션 롤백 테스트
+17,devops1@taskinsight.local,2.0,other,2026-05-08,Docker Compose 구성
+18,devops1@taskinsight.local,1.5,other,2026-05-09,Nginx 설정 작성
+19,dev1@taskinsight.local,4.0,development,2026-05-22,Redis 캐시 레이어 구현
+37,devops1@taskinsight.local,3.0,other,2026-05-23,pg_dump 스크립트 작성
+37,devops1@taskinsight.local,1.0,testing,2026-05-24,복구 테스트
+41,dev1@taskinsight.local,8.0,other,2026-05-08,raw_redmine 데이터 분석
+42,dev1@taskinsight.local,10.0,development,2026-05-15,마이그레이션 스크립트 작성
+42,dev1@taskinsight.local,6.0,testing,2026-05-18,스테이징 환경 테스트
+# 엣지 케이스: 최소 시간 (0.5h = 30분)
+21,qa1@taskinsight.local,0.5,testing,2026-05-19,빠른 스모크 테스트
+# 엣지 케이스: 최대 시간 (8h)
+22,dev1@taskinsight.local,8.0,development,2026-05-17,보안 취약점 전체 분석

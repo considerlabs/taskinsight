@@ -1,0 +1,7 @@
+identifier,name,description,status,members_note
+platform,만나 플랫폼,사내 업무 자동화 플랫폼 메인 프로젝트,active,"pm1, dev1~dev4, qa1, designer1"
+mobile-app,모바일 앱,iOS/Android 모바일 앱 개발,active,"pm2, dev5~dev7, qa2, designer2"
+infra,인프라 고도화,서버/DB/CI-CD 인프라 개선 작업,active,"pm1, devops1, dev4"
+legacy-migration,레거시 마이그레이션,Redmine → TaskInsight 데이터 이관,active,"admin, pm1, pm2, dev1"
+# 상태 테스트용
+archive-2025,2025년 완료 프로젝트,종료된 프로젝트 예시,inactive,"pm1"

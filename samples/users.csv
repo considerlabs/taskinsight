@@ -1,0 +1,24 @@
+email,display_name,role,is_active,note
+admin@taskinsight.local,시스템 관리자,system_admin,true,초기 관리자 계정
+pm1@taskinsight.local,김프로젝트,project_manager,true,플랫폼 개발팀 PM
+pm2@taskinsight.local,이기획,project_manager,true,서비스 기획팀 PM
+dev1@taskinsight.local,박백엔드,member,true,백엔드 개발자
+dev2@taskinsight.local,최프론트,member,true,프론트엔드 개발자
+dev3@taskinsight.local,정풀스택,member,true,풀스택 개발자
+dev4@taskinsight.local,한시니어,member,true,시니어 개발자
+dev5@taskinsight.local,오주니어,member,true,주니어 개발자
+dev6@taskinsight.local,임개발,member,true,백엔드 개발자
+dev7@taskinsight.local,조프론트,member,true,프론트엔드 개발자
+qa1@taskinsight.local,윤품질,member,true,QA 엔지니어
+qa2@taskinsight.local,류테스트,member,true,QA 엔지니어
+designer1@taskinsight.local,강디자인,member,true,UI/UX 디자이너
+designer2@taskinsight.local,신설계,member,true,UI/UX 디자이너
+devops1@taskinsight.local,고인프라,member,true,DevOps 엔지니어
+viewer1@taskinsight.local,황팀장,viewer,true,개발팀장 (조회만)
+viewer2@taskinsight.local,문대표,viewer,true,대표이사 (조회만)
+viewer3@taskinsight.local,백감사,viewer,true,외부 감사인
+inactive1@taskinsight.local,탈퇴회원A,member,false,퇴사 처리
+inactive2@taskinsight.local,탈퇴회원B,member,false,퇴사 처리
+# 엣지 케이스: 긴 이름, 특수문자
+edge1@taskinsight.local,홍길동(Hong GilDong / 홍),member,true,이름에 특수문자 포함
+edge2@taskinsight.local,A,member,true,최단 이름

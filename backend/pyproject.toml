@@ -1,6 +1,6 @@
 [project]
 name = "taskinsight-backend"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",
@@ -13,6 +13,12 @@ dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "apscheduler>=3.10.0",
+    # Phase 1+ 추가 의존성
+    "python-jose[cryptography]>=3.3.0",  # JWT
+    "passlib[bcrypt]>=1.7.4",            # 비밀번호 해시
+    "python-multipart>=0.0.9",           # 파일 업로드
+    "aiosmtplib>=3.0.0",                 # 비동기 이메일 발송
+    "aiofiles>=23.0.0",                  # 비동기 파일 I/O
 ]
 
 [build-system]
