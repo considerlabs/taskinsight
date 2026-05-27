@@ -158,7 +158,7 @@ ALLOWED_MIME_TYPES = {
     "application/x-gzip",
 }
 
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 def validate_upload(file: UploadFile) -> None:
     if file.content_type not in ALLOWED_MIME_TYPES:
@@ -247,7 +247,7 @@ REDIS_URL=redis://localhost:6379/0
 
 # 파일 업로드
 UPLOAD_DIR=/data/taskinsight/uploads
-MAX_FILE_SIZE_MB=50
+MAX_FILE_SIZE_MB=20
 
 # Ollama
 OLLAMA_BASE_URL=http://localhost:11434
