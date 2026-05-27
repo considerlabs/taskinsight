@@ -277,14 +277,11 @@ from __future__ import annotations
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.auth import User
-from app.models.task import ProjectMember
 from app.config import settings
-from typing import Optional
-
-ROLE_RANK = {"viewer": 0, "member": 1, "manager": 2}
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/login")
 
@@ -307,34 +304,26 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
         raise HTTPException(status_code=403, detail="시스템 관리자 권한이 필요합니다")
     return current_user
 
-def get_project_member(
-    project_id: int,
-    db: Session,
-    current_user: User,
-) -> Optional[ProjectMember]:
-    """system_admin은 None 반환 (모든 프로젝트 접근 허용). 일반 사용자는 멤버십 반환."""
-    if current_user.is_system_admin:
-        return None
-    member = db.query(ProjectMember).filter_by(
-        project_id=project_id, user_id=current_user.id
-    ).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="프로젝트 접근 권한이 없습니다")
-    return member
-
-def require_project_role(project_id: int, min_role: str):
-    """min_role 이상인 프로젝트 멤버만 허용. system_admin은 항상 통과."""
-    def dep(
-        db: Session = Depends(get_db),
+def require_project_role(*roles: str):
+    """project_id는 path parameter에서 자동 주입. system_admin은 항상 통과.
+    
+    사용 예:
+        Depends(require_project_role("manager"))           # 관리자만
+        Depends(require_project_role("manager", "member")) # 관리자 또는 팀원
+    """
+    async def dep(
+        project_id: int,
         current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
     ) -> User:
         if current_user.is_system_admin:
             return current_user
-        member = db.query(ProjectMember).filter_by(
-            project_id=project_id, user_id=current_user.id
-        ).first()
-        if not member or ROLE_RANK.get(member.role, -1) < ROLE_RANK[min_role]:
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        membership = db.execute(
+            text("SELECT role FROM project_members WHERE project_id = :pid AND user_id = :uid"),
+            {"pid": project_id, "uid": current_user.id},
+        ).fetchone()
+        if not membership or membership.role not in roles:
+            raise HTTPException(status_code=403, detail="이 작업에 대한 권한이 없습니다.")
         return current_user
     return dep
 ```
@@ -347,7 +336,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.deps import get_current_user, get_project_member, ROLE_RANK
+from app.deps import get_current_user, require_project_role
 from app.models.auth import User
 from app.models.task import Issue
 from app.schemas.issues import IssueCreate, IssueUpdate, IssueOut
@@ -356,19 +345,20 @@ from typing import Optional
 
 router = APIRouter()
 
+# 라우터는 /v1/projects/{project_id}/issues 에 마운트
+# project_id는 path param — require_project_role이 자동 주입
+
 @router.get("", response_model=PaginatedResponse[IssueOut])
 def list_issues(
-    project_id: Optional[int] = Query(None),
+    project_id: int,  # path param
     status_id: Optional[int] = Query(None),
     assignee_id: Optional[int] = Query(None),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_project_role("manager", "member", "viewer")),
 ):
-    q = db.query(Issue)
-    if project_id:
-        q = q.filter(Issue.project_id == project_id)
+    q = db.query(Issue).filter(Issue.project_id == project_id)
     if status_id:
         q = q.filter(Issue.status_id == status_id)
     if assignee_id:
@@ -379,19 +369,15 @@ def list_issues(
 
 @router.post("", response_model=IssueOut, status_code=201)
 def create_issue(
+    project_id: int,  # path param
     body: IssueCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_project_role("manager", "member")),
 ):
-    # member 이상만 생성 가능 — viewer는 403
-    member = get_project_member(body.project_id, db, current_user)
-    if member and ROLE_RANK.get(member.role, -1) < ROLE_RANK["member"]:
-        raise HTTPException(status_code=403)
-    issue = Issue(**body.model_dump(), author_id=current_user.id)
+    issue = Issue(**body.model_dump(), project_id=project_id, author_id=current_user.id)
     db.add(issue)
     db.commit()
     db.refresh(issue)
-    # 알림 dispatch (비동기 처리)
     from app.notifications.dispatcher import dispatch_issue_event
     dispatch_issue_event("issue_created", issue, current_user, db)
     return issue
