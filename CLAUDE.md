@@ -21,18 +21,23 @@
 
 | 항목 | docs/ | 오늘 확정 | 이유 |
 |---|---|---|---|
-| 역할 체계 | 프로젝트 단위 역할 | **전역 4단계 역할** (system_admin / project_manager / member / viewer) | 운영 단순성 우선. 프로젝트별 역할은 v2. |
+| 역할 체계 | 프로젝트 단위 역할 | **프로젝트 단위 역할 확정** (`is_system_admin` boolean 전역, 나머지는 `project_members.role`) | 전역 역할은 4개 프로젝트 100명 조직에서 첫 날 깨짐. `project_members` 테이블·API 설계 전체가 프로젝트 단위 전제. |
 | Gantt 차트 | GanttChart.tsx 포함 | **v2로 연기** | 리스트+칸반 먼저 완성 후 추가 |
 | 개발 전략 | MVP 개념 있음 | **MVP 없음. 각 페이즈 = 즉시 운영 가능 수준** | |
 | 테이블 접두사 | `users`, `projects`, `issues` | **동일하게 사용** (ti_ 접두사 없음) | docs/ 스키마 준수 |
 
-**역할 매트릭스 (전역 역할 기준):**
+**역할 체계:**
+- `users.is_system_admin` (boolean) — 전역. 모든 프로젝트에서 manager 권한.
+- `project_members.role` (`manager` | `member` | `viewer`) — 프로젝트 단위.
 
-| 기능 | system_admin | project_manager | member | viewer |
+**역할 매트릭스 (프로젝트 단위 역할 기준):**
+
+| 기능 | system_admin | project manager | member | viewer |
 |---|---|---|---|---|
 | 사용자 관리 | ✅ | ❌ | ❌ | ❌ |
 | 프로젝트 생성 | ✅ | ❌ | ❌ | ❌ |
-| 프로젝트 설정 | ✅ | ✅ (본인 프로젝트) | ❌ | ❌ |
+| 프로젝트 설정 | ✅ | ✅ (해당 프로젝트) | ❌ | ❌ |
+| 멤버 추가/제거 | ✅ | ✅ (해당 프로젝트) | ❌ | ❌ |
 | 이슈 생성/수정 | ✅ | ✅ | ✅ | ❌ |
 | 이슈 삭제 | ✅ | ✅ | ❌ | ❌ |
 | 코멘트/파일/타임 | ✅ | ✅ | ✅ | ❌ |
@@ -78,10 +83,10 @@ taskinsight/
 │   │   ├── 0001_raw_redmine.py
 │   │   ├── 0002_mart.py
 │   │   ├── 0003_mvp.py
-│   │   ├── 0004_auth.py          ← ti_users, ti_sessions
-│   │   ├── 0005_task_core.py     ← ti_projects ~ ti_issues
-│   │   ├── 0006_task_collab.py   ← ti_journals, ti_attachments, ti_watchers
-│   │   └── 0007_task_advanced.py ← ti_time_entries, ti_custom_field_values, ti_notifications
+│   │   ├── 0004_auth.py          ← users, user_refresh_tokens
+│   │   ├── 0005_task_core.py     ← projects, project_members, workflow_statuses, workflow_transitions, issues
+│   │   ├── 0006_task_collab.py   ← issue_journals, issue_attachments, milestones, time_entries
+│   │   └── 0007_task_advanced.py ← notifications
 │   └── app/
 │       ├── config.py
 │       ├── db.py
@@ -174,14 +179,14 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(DeclarativeBase):
     pass
 
-class TiUser(Base):
-    __tablename__ = "ti_users"
+class User(Base):
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    role: Mapped[str] = mapped_column(String(50), default="member")
+    is_system_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 ```
@@ -269,56 +274,69 @@ class IssueOut(BaseModel):
 ```python
 # app/deps.py
 from __future__ import annotations
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models.auth import TiUser
+from app.models.auth import User
+from app.models.task import ProjectMember
 from app.config import settings
 from typing import Optional
+
+ROLE_RANK = {"viewer": 0, "member": 1, "manager": 2}
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/login")
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
-) -> TiUser:
+) -> User:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
         user_id: int = payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
-    user = db.query(TiUser).filter_by(id=user_id, is_active=True).first()
+    user = db.query(User).filter_by(id=user_id, is_active=True).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-def require_role(*roles: str):
-    def dep(current_user: TiUser = Depends(get_current_user)) -> TiUser:
-        if current_user.role not in roles:
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
-        return current_user
-    return dep
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_system_admin:
+        raise HTTPException(status_code=403, detail="시스템 관리자 권한이 필요합니다")
+    return current_user
 
-# 사용 예시
-def get_admin(user: TiUser = Depends(require_role("system_admin"))) -> TiUser:
-    return user
-
-def require_project_access(
+def get_project_member(
     project_id: int,
-    db: Session = Depends(get_db),
-    current_user: TiUser = Depends(get_current_user),
-) -> TiUser:
-    if current_user.role == "system_admin":
-        return current_user
-    from app.models.task import TiProjectMember
-    member = db.query(TiProjectMember).filter_by(
+    db: Session,
+    current_user: User,
+) -> Optional[ProjectMember]:
+    """system_admin은 None 반환 (모든 프로젝트 접근 허용). 일반 사용자는 멤버십 반환."""
+    if current_user.is_system_admin:
+        return None
+    member = db.query(ProjectMember).filter_by(
         project_id=project_id, user_id=current_user.id
     ).first()
     if not member:
         raise HTTPException(status_code=403, detail="프로젝트 접근 권한이 없습니다")
-    return current_user
+    return member
+
+def require_project_role(project_id: int, min_role: str):
+    """min_role 이상인 프로젝트 멤버만 허용. system_admin은 항상 통과."""
+    def dep(
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        if current_user.is_system_admin:
+            return current_user
+        member = db.query(ProjectMember).filter_by(
+            project_id=project_id, user_id=current_user.id
+        ).first()
+        if not member or ROLE_RANK.get(member.role, -1) < ROLE_RANK[min_role]:
+            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        return current_user
+    return dep
 ```
 
 ### 4.5 라우터 패턴
@@ -329,9 +347,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.deps import get_current_user, require_project_access
-from app.models.auth import TiUser
-from app.models.task import TiIssue
+from app.deps import get_current_user, get_project_member, ROLE_RANK
+from app.models.auth import User
+from app.models.task import Issue
 from app.schemas.issues import IssueCreate, IssueUpdate, IssueOut
 from app.schemas.common import PaginatedResponse
 from typing import Optional
@@ -346,30 +364,30 @@ def list_issues(
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-    current_user: TiUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    q = db.query(TiIssue)
+    q = db.query(Issue)
     if project_id:
-        q = q.filter(TiIssue.project_id == project_id)
+        q = q.filter(Issue.project_id == project_id)
     if status_id:
-        q = q.filter(TiIssue.status_id == status_id)
+        q = q.filter(Issue.status_id == status_id)
     if assignee_id:
-        q = q.filter(TiIssue.assignee_id == assignee_id)
+        q = q.filter(Issue.assignee_id == assignee_id)
     total = q.count()
-    items = q.order_by(TiIssue.updated_at.desc()).offset(offset).limit(limit).all()
+    items = q.order_by(Issue.updated_at.desc()).offset(offset).limit(limit).all()
     return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
 
 @router.post("", response_model=IssueOut, status_code=201)
 def create_issue(
     body: IssueCreate,
     db: Session = Depends(get_db),
-    current_user: TiUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     # member 이상만 생성 가능 — viewer는 403
-    if current_user.role == "viewer":
+    member = get_project_member(body.project_id, db, current_user)
+    if member and ROLE_RANK.get(member.role, -1) < ROLE_RANK["member"]:
         raise HTTPException(status_code=403)
-    require_project_access(body.project_id, db, current_user)
-    issue = TiIssue(**body.model_dump(), author_id=current_user.id)
+    issue = Issue(**body.model_dump(), author_id=current_user.id)
     db.add(issue)
     db.commit()
     db.refresh(issue)
@@ -445,11 +463,11 @@ def create_journal_for_update(
     if not changed_fields and not notes:
         return  # 변경 없으면 저널 생성 안 함
 
-    journal = TiJournal(issue_id=issue.id, user_id=user_id, notes=notes)
+    journal = Journal(issue_id=issue.id, user_id=user_id, notes=notes)
     db.add(journal)
     db.flush()
     for cf in changed_fields:
-        db.add(TiJournalDetail(journal_id=journal.id, property="attr", **cf))
+        db.add(JournalDetail(journal_id=journal.id, property="attr", **cf))
 ```
 
 ---
@@ -483,8 +501,8 @@ def dispatch_issue_event(
         _executor.submit(send_teams_notification, payload)
         _executor.submit(send_email_notification, user.email, payload)
         # DB 알림 레코드도 저장
-        from app.models.task import TiNotification
-        db.add(TiNotification(user_id=user.id, event_type=event_type, payload=payload))
+        from app.models.task import Notification
+        db.add(Notification(user_id=user.id, event_type=event_type, payload=payload))
     db.commit()
 ```
 
